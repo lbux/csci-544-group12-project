@@ -9,13 +9,8 @@ import networkx as nx
 
 from filtering import ThreadFilter
 from interfaces import InterventionResult, ReasoningResult, RedditThread
+from models import ToxicityClassifier
 from orchestrator import ModerationOrchestrator
-
-
-class DummyClassifier:
-    def predict(self, text: str) -> float:
-        return random.uniform(0.1, 0.9)
-
 
 class DummyReasoner:
     def analyze_intent(
@@ -111,10 +106,10 @@ def visualize_graph(G: nx.DiGraph):
 
 
 if __name__ == "__main__":
-    classifier = DummyClassifier()
+    classifier = ToxicityClassifier()
 
     # 1. Filter JSONL files
-    filter_engine = ThreadFilter(classifier, threshold=0.4, max_threads=2)
+    filter_engine = ThreadFilter(classifier, threshold=0.1, max_threads=2)
     target_threads: List[RedditThread] = filter_engine.filter_file("data.jsonl")
 
     # 2. Run Orchestrator
