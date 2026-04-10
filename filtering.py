@@ -1,5 +1,5 @@
 import json
-from typing import List, cast
+from typing import cast
 
 from interfaces import Comment, RedditThread, ToxicityClassifier
 
@@ -11,12 +11,12 @@ class ThreadFilter:
         threshold: float = 0.4,
         max_threads: int = 5,
     ) -> None:
-        self.classifier = classifier
-        self.threshold = threshold
-        self.max_threads = max_threads
+        self.classifier: ToxicityClassifier = classifier
+        self.threshold: float = threshold
+        self.max_threads: int = max_threads
 
-    def _get_all_texts(self, comments: List[Comment]) -> List[str]:
-        texts = []
+    def _get_all_texts(self, comments: list[Comment]) -> list[str]:
+        texts: list[str] = []
         for comment in comments:
             texts.append(comment["body"])
             if comment.get("replies"):
@@ -33,16 +33,16 @@ class ThreadFilter:
         total_score = sum(self.classifier.predict(text) for text in texts)
         return total_score / len(texts)
 
-    def filter_file(self, jsonl_path: str) -> List[RedditThread]:
+    def filter_file(self, jsonl_path: str) -> list[RedditThread]:
         """Reads a .jsonl file and returns a subset of highly toxic threads."""
-        selected_threads = []
+        selected_threads: list[RedditThread] = []
 
         with open(jsonl_path, "r", encoding="utf-8") as f:
             for line in f:
                 if len(selected_threads) >= self.max_threads:
                     break
 
-                thread_data = cast(RedditThread, json.loads(line))
+                thread_data: RedditThread = cast(RedditThread, json.loads(line))
                 avg_tox = self.calculate_average_toxicity(thread_data)
 
                 if avg_tox >= self.threshold:

@@ -1,6 +1,3 @@
-from typing import List
-
-
 import random
 
 import matplotlib.colors as mcolors
@@ -47,11 +44,11 @@ class DummyIntervener:
         }
 
 
-def visualize_graph(G: nx.DiGraph):
-    plt.figure(figsize=(18, 12))
+def visualize_graph(G: nx.DiGraph) -> None:  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
+    _ = plt.figure(figsize=(18, 12))  # pyright: ignore[reportUnknownMemberType]
 
-    pos = nx.spring_layout(
-        G,
+    pos = nx.spring_layout(  # pyright: ignore[reportUnknownVariableType]
+        G,  # pyright: ignore[reportUnknownArgumentType]
         k=1.2,
         iterations=100,
         seed=42,
@@ -64,29 +61,29 @@ def visualize_graph(G: nx.DiGraph):
     # double check this data type
     labels: dict[str, str] = {}
 
-    for node, data in G.nodes(data=True):
-        score = data.get("toxicity_score", 0.0)
+    for node, data in G.nodes(data=True):  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAny]
+        score: float = data.get("toxicity_score", 0.0)  # pyright: ignore[reportAny]
 
         # Original post
-        if data.get("type") == "post":
+        if data.get("type") == "post":  # pyright: ignore[reportAny]
             node_colors.append("gold")
             node_sizes.append(3500)
-            labels[node] = f"Original Post\n{data.get('author')}"
+            labels[node] = f"Original Post\n{data.get('author')}"  # pyright: ignore[reportAny]
 
         # Standardize Comments
         else:
             node_colors.append(mcolors.to_hex(cmap(score)))
             node_sizes.append(2500)
 
-            author = data.get("author", "Unknown")
+            author: str = data.get("author", "Unknown")  # pyright: ignore[reportAny]
             if len(author) > 8:
                 author = author[:5] + "..."
 
             labels[node] = f"{author}\nTox: {score:.2f}"
 
     nx.draw_networkx(
-        G,
-        pos,
+        G,  # pyright: ignore[reportUnknownArgumentType]
+        pos,  # pyright: ignore[reportUnknownArgumentType]
         labels=labels,
         with_labels=True,
         node_color=node_colors,
@@ -99,10 +96,10 @@ def visualize_graph(G: nx.DiGraph):
         edge_color="gray",
     )
 
-    plt.title("Thread Result", fontsize=16, fontweight="bold")
-    plt.axis("off")
+    _ = plt.title("Thread Result", fontsize=16, fontweight="bold")  # pyright: ignore[reportUnknownMemberType]
+    _ = plt.axis("off")  # pyright: ignore[reportUnknownMemberType]
     plt.tight_layout()
-    plt.show()
+    plt.show()  # pyright: ignore[reportUnknownMemberType]
 
 
 if __name__ == "__main__":
@@ -110,14 +107,14 @@ if __name__ == "__main__":
 
     # 1. Filter JSONL files
     filter_engine = ThreadFilter(classifier, threshold=0.1, max_threads=2)
-    target_threads: List[RedditThread] = filter_engine.filter_file("data.jsonl")
+    target_threads: list[RedditThread] = filter_engine.filter_file("data.jsonl")
 
     # 2. Run Orchestrator
     orchestrator = ModerationOrchestrator(
-        classifier, DummyReasoner(), DummyIntervener()
+        classifier, reasoner=DummyReasoner(), intervener=DummyIntervener()
     )
 
     for thread in target_threads:
         print(f"\n--- Processing Thread: {thread['title']} ---")
-        processed_graph = orchestrator.process_thread(thread)
+        processed_graph = orchestrator.process_thread(thread)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
         visualize_graph(processed_graph)

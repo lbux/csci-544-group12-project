@@ -7,6 +7,7 @@ class Comment(TypedDict):
     body: str
     created_utc: float
     replies: list["Comment"]
+    toxicity: float
 
 
 class RedditThread(TypedDict):

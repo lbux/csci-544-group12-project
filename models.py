@@ -1,15 +1,14 @@
-# from interfaces import ToxicityClassifier
 from transformers import AutoTokenizer
-from optimum.onnxruntime import ORTModelForSequenceClassification
+from optimum.onnxruntime import ORTModelForSequenceClassification  # pyright: ignore[reportMissingTypeStubs]
 import torch
 
 
 class ToxicityClassifier():
 
     def __init__(self):
-        self.tokenizer = AutoTokenizer.from_pretrained("models/cga_deberta_onnx_int8")
+        self.tokenizer = AutoTokenizer.from_pretrained("models/cga_deberta_onnx_int8")  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
 
-        self.ort_model = ORTModelForSequenceClassification.from_pretrained(
+        self.ort_model = ORTModelForSequenceClassification.from_pretrained(  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
             "models/cga_deberta_onnx_int8", 
             file_name="model_quantized.onnx"
         )
@@ -17,13 +16,13 @@ class ToxicityClassifier():
 
         #print(self.ort_model.config)
 
-        inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+        inputs = self.tokenizer(text, return_tensors="pt", padding=True, truncation=True)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
         with torch.no_grad():
-            outputs = self.ort_model(**inputs)
+            outputs = self.ort_model(**inputs)  # pyright: ignore[reportUnknownVariableType]
         
-        logits = outputs.logits
-        probs = torch.softmax(logits, dim=-1)
+        logits = outputs.logits  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        probs = torch.softmax(input = logits, dim=-1)  # pyright: ignore[reportUnknownArgumentType]
         toxicity_score = probs[0][1].item()
 
         return toxicity_score

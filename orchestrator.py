@@ -1,3 +1,9 @@
+from networkx.classes.digraph import DiGraph
+
+
+from typing import Any
+
+
 from collections import defaultdict
 
 import networkx as nx
@@ -36,14 +42,14 @@ class ModerationOrchestrator:
         intervener: InterventionAgent,
         intervention_threshold: int = 10,
     ) -> None:
-        self.classifier = classifier
-        self.reasoner = reasoner
-        self.intervener = intervener
-        self.intervention_threshold = intervention_threshold
-        self.tracker = UserStateTracker()
-        self.graph = nx.DiGraph()
+        self.classifier: ToxicityClassifier = classifier
+        self.reasoner: ReasoningAgent = reasoner
+        self.intervener: InterventionAgent = intervener
+        self.intervention_threshold: int = intervention_threshold
+        self.tracker: UserStateTracker = UserStateTracker()
+        self.graph: DiGraph[Any] = nx.DiGraph()  # pyright: ignore[reportExplicitAny]
 
-    def process_thread(self, thread: RedditThread) -> nx.DiGraph:
+    def process_thread(self, thread: RedditThread) -> nx.DiGraph:  # pyright: ignore[reportUnknownParameterType, reportMissingTypeArgument]
         """Converts a thread to a graph and processes it chronologically to allow for scoring comments as they \"arrive\""""
         self.graph.clear()
 
@@ -88,8 +94,8 @@ class ModerationOrchestrator:
             )
 
         self.graph.add_node(node_id, text=text, author=author, type="comment")
-        self.graph.add_edge(parent_id, node_id)
-        parent_text: str = self.graph.nodes[parent_id].get("text", "")
+        _ = self.graph.add_edge(parent_id, node_id)
+        parent_text: str = self.graph.nodes[parent_id].get("text", "")  # pyright: ignore[reportAny]
 
         score: float = self.classifier.predict(text)
         self.graph.nodes[node_id]["toxicity_score"] = score

@@ -1,4 +1,4 @@
-from typing import Iterator
+from collections.abc import Iterator
 from interfaces import Comment
 
 def flatten_comments(comments: list[Comment], parent_id: str) -> Iterator[tuple[Comment, str]]:

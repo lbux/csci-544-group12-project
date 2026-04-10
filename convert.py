@@ -1,20 +1,20 @@
 
-from optimum.onnxruntime import ORTModelForSequenceClassification, ORTQuantizer
+from optimum.onnxruntime import ORTModelForSequenceClassification, ORTQuantizer  # pyright: ignore[reportMissingTypeStubs]
 from transformers import AutoTokenizer
-from optimum.onnxruntime.configuration import AutoQuantizationConfig
+from optimum.onnxruntime.configuration import AutoQuantizationConfig  # pyright: ignore[reportMissingTypeStubs]
 
 model_path = "models/cga_deberta"
 onnx_path = "models/cga_deberta_onnx"
 
-model = ORTModelForSequenceClassification.from_pretrained(
-    model_path,
+model = ORTModelForSequenceClassification.from_pretrained(  # pyright: ignore[reportUnknownMemberType]
+    model_id=model_path,
     export=True
 )
 
-tokenizer = AutoTokenizer.from_pretrained(model_path)
+tokenizer = AutoTokenizer.from_pretrained(model_path)  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
 
-model.save_pretrained(onnx_path)
-tokenizer.save_pretrained(onnx_path)
+_ = model.save_pretrained(onnx_path)  # pyright: ignore[reportUnknownMemberType]
+tokenizer.save_pretrained(onnx_path)  # pyright: ignore[reportUnknownMemberType]
 
 qconfig = AutoQuantizationConfig.avx2(
     is_static=False,
@@ -23,7 +23,7 @@ qconfig = AutoQuantizationConfig.avx2(
 
 quantizer = ORTQuantizer.from_pretrained(onnx_path)
 
-quantizer.quantize(
-    qconfig,
+_ = quantizer.quantize(
+    quantization_config=qconfig,
     save_dir="models/cga_deberta_onnx_int8",
 )
