@@ -1,6 +1,22 @@
+from pathlib import Path
+
 import torch
+from huggingface_hub import (
+    snapshot_download,  # pyright: ignore[reportUnknownVariableType]
+)
 from optimum.onnxruntime import ORTModelForSequenceClassification
 from transformers import AutoTokenizer
+
+
+def download_model() -> None:
+    model_path = Path("models/cga_deberta_onnx_int8")
+
+    if not model_path.exists():
+        _ = snapshot_download(
+            repo_id="lbux/cga-deberta-onnx-int8",
+            local_dir=model_path,
+            local_dir_use_symlinks=False,
+        )
 
 
 class ToxicityClassifier:

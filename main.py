@@ -2,7 +2,7 @@ import random
 
 from filtering import ThreadFilter
 from interfaces import InterventionResult, ReasoningResult, RedditThread
-from models import ToxicityClassifier
+from models import ToxicityClassifier, download_model
 from orchestrator import ModerationOrchestrator
 from visualization import visualize_graph
 
@@ -43,6 +43,8 @@ class DummyIntervener:
 
 
 if __name__ == "__main__":
+    download_model()
+
     classifier = ToxicityClassifier()
     filter_engine = ThreadFilter(classifier, max_threads=2, chain_length=4)
     target_threads: list[RedditThread] = filter_engine.filter_file(

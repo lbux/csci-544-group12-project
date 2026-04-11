@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any
 
 import networkx as nx
 from networkx.classes.digraph import DiGraph
@@ -45,7 +44,7 @@ class ModerationOrchestrator:
         self.intervener: InterventionAgent = intervener
         self.intervention_threshold: int = intervention_threshold
         self.tracker: UserStateTracker = UserStateTracker()
-        self.graph: DiGraph[Any] = nx.DiGraph()  # pyright: ignore[reportExplicitAny]
+        self.graph: DiGraph[str] = nx.DiGraph()
 
     def process_thread(self, thread: RedditThread) -> nx.DiGraph[str]:
         """Converts a thread to a graph and processes it chronologically to allow for scoring comments as they \"arrive\""""
@@ -67,6 +66,7 @@ class ModerationOrchestrator:
                 comment["id"],
                 comment["author"],
                 comment["body"],
+                comment.get("toxicity", 0.0),
                 parent_id,
                 root_context,
             )
@@ -74,7 +74,7 @@ class ModerationOrchestrator:
         return self.graph
 
     def _ingest_comment(
-        self, node_id: str, author: str, text: str, parent_id: str, root_context: str
+        self, node_id: str, author: str, text: str, toxicity: float, parent_id: str, root_context: str
     ) -> None:
         """Internal logic that handles adding nodes to graph, scoring, and intervening"""
         if not author or author == "[deleted]":
@@ -95,11 +95,10 @@ class ModerationOrchestrator:
         _ = self.graph.add_edge(parent_id, node_id)
         parent_text: str = self.graph.nodes[parent_id].get("text", "")  # pyright: ignore[reportAny]
 
-        score: float = self.classifier.predict(text)
-        self.graph.nodes[node_id]["toxicity_score"] = score
+        self.graph.nodes[node_id]["toxicity_score"] = toxicity
 
         # TODO: Add an actual threshold that works for our data. This is a generic placeholder.
-        if score >= 0.6:
+        if toxicity >= 0.6:
             # This would be the result of the agent. We have a category for type of toxicity, how many points to
             # penalize, and the reasoning from the agent.
             reasoning: ReasoningResult = self.reasoner.analyze_intent(
