@@ -48,10 +48,10 @@ class ToxicityClassifier:
                 repo_id="lbux/cga-deberta-onnx-int8",
                 local_dir=model_path,
             )
-        self.tokenizer = AutoTokenizer.from_pretrained("models/cga_deberta_onnx_int8")  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
 
         self.ort_model = ORTModelForSequenceClassification.from_pretrained(  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
-            "models/cga_deberta_onnx_int8",
+            model_path,
             file_name="model_quantized.onnx",
         )
 
@@ -75,6 +75,4 @@ class ToxicityClassifier:
 
 # if __name__ == "__main__":
 #     classifier = ToxicityClassifier()
-#     text = "Hello!!"
-#     result = classifier.predict(text)
-#     print(result)
+#     reasoner = LLMReasoner()
