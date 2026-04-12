@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import ollama
 import torch
 from huggingface_hub import (
     snapshot_download,  # pyright: ignore[reportUnknownVariableType]
@@ -7,19 +8,46 @@ from huggingface_hub import (
 from optimum.onnxruntime import ORTModelForSequenceClassification
 from transformers import AutoTokenizer
 
+from interfaces import ReasoningResult
 
-def download_model() -> None:
-    model_path = Path("models/cga_deberta_onnx_int8")
 
-    if not model_path.exists():
-        _ = snapshot_download(
-            repo_id="lbux/cga-deberta-onnx-int8",
-            local_dir=model_path,
+class LLMReasoner:
+    def __init__(self, model: str = "gemma4:e4b") -> None:
+        self.model: str = model
+        _ = ollama.pull(self.model)
+
+    def analyze_intent(
+        self, text: str, parent_text: str, root_context: str
+    ) -> ReasoningResult:
+
+        SYSTEM_MESSAGE: str = f"""
+        Template system message with {root_context} and {parent_text}
+        """
+        USER_MESSAGE = f"""
+        This is a template prompt with {text}
+        """
+
+        messages = [
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": USER_MESSAGE},
+        ]
+
+        response: ollama.ChatResponse = ollama.chat(  # pyright: ignore[reportUnknownMemberType]
+            self.model, messages, format=ReasoningResult.model_json_schema()
         )
+        output = ReasoningResult.model_validate_json(response.message.content)  # pyright: ignore[reportArgumentType]
+        return output
 
 
 class ToxicityClassifier:
-    def __init__(self):
+    def __init__(self) -> None:
+        model_path = Path("models/cga_deberta_onnx_int8")
+
+        if not model_path.exists():
+            _ = snapshot_download(
+                repo_id="lbux/cga-deberta-onnx-int8",
+                local_dir=model_path,
+            )
         self.tokenizer = AutoTokenizer.from_pretrained("models/cga_deberta_onnx_int8")  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]
 
         self.ort_model = ORTModelForSequenceClassification.from_pretrained(  # pyright: ignore[reportUnknownMemberType, reportUnannotatedClassAttribute]

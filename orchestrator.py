@@ -11,7 +11,6 @@ from interfaces import (
     ReasoningAgent,
     ReasoningResult,
     RedditThread,
-    ToxicityScorer,
 )
 from utils import flatten_comments
 
@@ -34,12 +33,10 @@ class UserStateTracker:
 class ModerationOrchestrator:
     def __init__(
         self,
-        classifier: ToxicityScorer,
         reasoner: ReasoningAgent,
         intervener: InterventionAgent,
         intervention_threshold: int = 10,
     ) -> None:
-        self.classifier: ToxicityScorer = classifier
         self.reasoner: ReasoningAgent = reasoner
         self.intervener: InterventionAgent = intervener
         self.intervention_threshold: int = intervention_threshold
