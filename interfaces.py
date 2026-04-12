@@ -1,5 +1,7 @@
 from typing import NotRequired, Protocol, TypedDict
 
+from pydantic import BaseModel
+
 
 class Comment(TypedDict):
     id: str
@@ -20,7 +22,7 @@ class RedditThread(TypedDict):
     body_toxicity: NotRequired[float]
 
 
-class ReasoningResult(TypedDict):
+class ReasoningResult(BaseModel):
     category: str  # e.g., "flare", "toxic", "zero-tolerance"
     points: int
     explanation: str

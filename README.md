@@ -1,6 +1,8 @@
-Install [uv](https://docs.astral.sh/uv/)
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 Install [graphviz](https://graphviz.org/download/)
+
+Install [ollama](https://ollama.com/download)
 
 Run `uv sync` to install dependencies
 

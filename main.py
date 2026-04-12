@@ -1,4 +1,5 @@
-import random
+import ollama
+from ollama._types import ChatResponse
 
 from filtering import ThreadFilter
 from interfaces import InterventionResult, ReasoningResult, RedditThread
@@ -7,29 +8,32 @@ from orchestrator import ModerationOrchestrator
 from visualization import visualize_graph
 
 
-class DummyReasoner:
+class Reasoner:
+    def __init__(self, model: str = "gemma4:e4b") -> None:
+        self.model: str = model
+        _ = ollama.pull(model)
+
     def analyze_intent(
         self, text: str, parent_text: str, root_context: str
     ) -> ReasoningResult:
-        roll = random.random()
-        if roll > 0.9:
-            return {
-                "category": "zero-tolerance",
-                "points": 10,
-                "explanation": "Severe attack.",
-            }
-        elif roll > 0.4:
-            return {
-                "category": "toxic",
-                "points": random.randint(2, 5),
-                "explanation": "Hostile tone.",
-            }
-        else:
-            return {
-                "category": "flare",
-                "points": 0,
-                "explanation": "Just heated debate.",
-            }
+
+        SYSTEM_MESSAGE: str = f"""
+        Template system message with {root_context} and {parent_text}
+        """
+        USER_MESSAGE = f"""
+        This is a template prompt with {text}
+        """
+
+        messages = [
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": USER_MESSAGE},
+        ]
+
+        response: ChatResponse = ollama.chat(  # pyright: ignore[reportUnknownMemberType]
+            self.model, messages, format=ReasoningResult.model_json_schema()
+        )
+        output = ReasoningResult.model_validate_json(response.message.content)  # pyright: ignore[reportArgumentType]
+        return output
 
 
 class DummyIntervener:
@@ -52,7 +56,7 @@ if __name__ == "__main__":
     )
 
     orchestrator = ModerationOrchestrator(
-        classifier, reasoner=DummyReasoner(), intervener=DummyIntervener()
+        classifier, reasoner=Reasoner(), intervener=DummyIntervener()
     )
 
     for thread in target_threads:

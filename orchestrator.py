@@ -74,7 +74,13 @@ class ModerationOrchestrator:
         return self.graph
 
     def _ingest_comment(
-        self, node_id: str, author: str, text: str, toxicity: float, parent_id: str, root_context: str
+        self,
+        node_id: str,
+        author: str,
+        text: str,
+        toxicity: float,
+        parent_id: str,
+        root_context: str,
     ) -> None:
         """Internal logic that handles adding nodes to graph, scoring, and intervening"""
         if not author or author == "[deleted]":
@@ -105,13 +111,13 @@ class ModerationOrchestrator:
                 text, parent_text, root_context
             )
 
-            if reasoning["category"] in ["toxic", "zero-tolerance"]:
+            if reasoning.category in ["toxic", "zero-tolerance"]:
                 # If the model categorizes as the comment as anything other than a heated flare, penalize
                 # The categories would be something we define. We can assign a rubric to the model for how to
                 # assign points
-                current_penalty = self.tracker.add_penalty(author, reasoning["points"])
+                current_penalty = self.tracker.add_penalty(author, reasoning.points)
                 print(
-                    f"[WARN] {author} gained {reasoning['points']} pts (Total: {current_penalty})"
+                    f"[WARN] {author} gained {reasoning.points} pts (Total: {current_penalty})"
                 )
 
                 # If the user's points reach the threshold, intervene.
