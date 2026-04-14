@@ -1,35 +1,8 @@
-import random
-
 from filtering import ThreadFilter
-from interfaces import InterventionResult, ReasoningResult, RedditThread
-from models import ToxicityClassifier, download_model
+from interfaces import InterventionResult, RedditThread
+from models import LLMReasoner, ToxicityClassifier
 from orchestrator import ModerationOrchestrator
 from visualization import visualize_graph
-
-
-class DummyReasoner:
-    def analyze_intent(
-        self, text: str, parent_text: str, root_context: str
-    ) -> ReasoningResult:
-        roll = random.random()
-        if roll > 0.9:
-            return {
-                "category": "zero-tolerance",
-                "points": 10,
-                "explanation": "Severe attack.",
-            }
-        elif roll > 0.4:
-            return {
-                "category": "toxic",
-                "points": random.randint(2, 5),
-                "explanation": "Hostile tone.",
-            }
-        else:
-            return {
-                "category": "flare",
-                "points": 0,
-                "explanation": "Just heated debate.",
-            }
 
 
 class DummyIntervener:
@@ -43,16 +16,15 @@ class DummyIntervener:
 
 
 if __name__ == "__main__":
-    download_model()
-
-    classifier = ToxicityClassifier()
-    filter_engine = ThreadFilter(classifier, max_threads=2, chain_length=4)
+    filter_engine = ThreadFilter(
+        classifier=ToxicityClassifier(), max_threads=2, chain_length=4
+    )
     target_threads: list[RedditThread] = filter_engine.filter_file(
         "data.jsonl", "out.jsonl"
     )
 
-    orchestrator = ModerationOrchestrator(
-        classifier, reasoner=DummyReasoner(), intervener=DummyIntervener()
+    orchestrator: ModerationOrchestrator = ModerationOrchestrator(
+        reasoner=LLMReasoner(), intervener=DummyIntervener()
     )
 
     for thread in target_threads:

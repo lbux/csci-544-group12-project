@@ -33,7 +33,7 @@ def visualize_graph(G: nx.DiGraph[str]) -> None:
 
         score: float = data.get("toxicity_score", 0.0)
         author: str = data.get("author", "Unknown")
-        content: str = data.get("text", "")
+        content: str = data.get("body", "")
 
         wrapped_text = "<br>".join(textwrap.wrap(content, width=60))
 

@@ -1,5 +1,7 @@
 from typing import NotRequired, Protocol, TypedDict
 
+from pydantic import BaseModel
+
 
 class Comment(TypedDict):
     id: str
@@ -14,16 +16,16 @@ class RedditThread(TypedDict):
     submission_id: str
     author: str
     title: str
-    body: NotRequired[str]
+    selftext: NotRequired[str]
     created_utc: float
     comments: list[Comment]
     body_toxicity: NotRequired[float]
 
 
-class ReasoningResult(TypedDict):
+class ReasoningResult(BaseModel):
+    explanation: str
     category: str  # e.g., "flare", "toxic", "zero-tolerance"
     points: int
-    explanation: str
 
 
 class InterventionResult(TypedDict):
@@ -31,13 +33,13 @@ class InterventionResult(TypedDict):
     tone_used: str
 
 
-class ToxicityClassifier(Protocol):
+class ToxicityScorer(Protocol):
     def predict(self, text: str) -> float: ...
 
 
 class ReasoningAgent(Protocol):
     def analyze_intent(
-        self, text: str, parent_text: str, root_context: str
+        self, comment_body: str, parent_body: str, thread_context: str
     ) -> ReasoningResult: ...
 
 
