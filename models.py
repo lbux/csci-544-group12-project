@@ -14,10 +14,13 @@ from interfaces import ReasoningResult
 class LLMReasoner:
     def __init__(self, model: str = "gemma4:e4b") -> None:
         self.model: str = model
+        # self.client: Client = ollama.Client(
+        #     host="http://localhost:14434",
+        # )
         _ = ollama.pull(self.model)
 
     def analyze_intent(
-        self, text: str, parent_text: str, root_context: str
+        self, comment_body: str, parent_body: str, thread_context: str
     ) -> ReasoningResult:
 
         SYSTEM_MESSAGE: str = """
@@ -83,13 +86,13 @@ class LLMReasoner:
         Analyze the following inputs and output a valid JSON object matching the requested schema. Provide your step-by-step explanation first, then the category, then the points.
 
         Original Post:
-        {root_context}
+        {parent_body}
 
         Previous Comment:
-        {parent_text}
+        {thread_context}
 
         User Message:
-        {text}
+        {comment_body}
         """
 
         messages = [

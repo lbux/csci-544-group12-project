@@ -37,10 +37,12 @@ class ModerationOrchestrator:
         reasoner: ReasoningAgent,
         intervener: InterventionAgent,
         intervention_threshold: int = 10,
+        toxicity_threshold: float = 0.6,
     ) -> None:
         self.reasoner: ReasoningAgent = reasoner
         self.intervener: InterventionAgent = intervener
         self.intervention_threshold: int = intervention_threshold
+        self.toxicity_threshold: float = toxicity_threshold
         self.tracker: UserStateTracker = UserStateTracker()
         self.graph: DiGraph[str] = nx.DiGraph()
 
@@ -48,73 +50,78 @@ class ModerationOrchestrator:
         """Converts a thread to a graph and processes it chronologically to allow for scoring comments as they \"arrive\""""
         self.graph.clear()
 
-        root_id = thread["submission_id"]
-        post_body = thread.get("body", "")
-        root_context = f"Title: {thread['title']}\nPost: {post_body}"
+        submission_id = thread["submission_id"]
+        post_body = thread.get("selftext", "").strip()
+        if post_body:
+            thread_context = f"Title: {thread['title']}\nPost: {post_body}"
+        else:
+            thread_context = f"Title: {thread['title']}"
 
         self.graph.add_node(
-            root_id, text=root_context, author=thread["author"], type="post"
+            submission_id, body=thread_context, author=thread["author"], type="post"
         )
 
-        flat_comments = list(flatten_comments(thread["comments"], root_id))
+        flat_comments = list(flatten_comments(thread["comments"], submission_id))
         flat_comments.sort(key=lambda x: x[0].get("created_utc", 0.0))
 
         for comment, parent_id in flat_comments:
             self._ingest_comment(
-                comment["id"],
-                comment["author"],
-                comment["body"],
-                comment.get("toxicity", 0.0),
-                parent_id,
-                root_context,
+                comment_id=comment["id"],
+                author=comment["author"],
+                comment_body=comment["body"],
+                toxicity=comment.get("toxicity", 0.0),
+                parent_id=parent_id,
+                thread_context=thread_context,
             )
 
         return self.graph
 
     def _ingest_comment(
         self,
-        node_id: str,
+        comment_id: str,
         author: str,
-        text: str,
+        comment_body: str,
         toxicity: float,
         parent_id: str,
-        root_context: str,
+        thread_context: str,
     ) -> None:
         """Internal logic that handles adding nodes to graph, scoring, and intervening"""
-        if not author or author == "[deleted]":
+        if not author or author in ["[deleted]", "[removed]"]:
             author = "Deleted"
 
         # To not break NetworkX, we add generic nodes for when a comment relies on a parent
         # that does not exist (reddit api didn't provide it, network issues, banned account, etc)
         if parent_id not in self.graph:
             self.graph.add_node(
-                node_for_adding=parent_id,
-                text="[Missing]",
+                parent_id,
+                body="[Missing]",
                 author="Unavailable",
                 type="comment",
                 toxicity_score=0.0,
             )
 
-        self.graph.add_node(node_id, text=text, author=author, type="comment")
-        _ = self.graph.add_edge(parent_id, node_id)
-        parent_text: str = self.graph.nodes[parent_id].get("text", "")  # pyright: ignore[reportAny]
+        self.graph.add_node(
+            comment_id, body=comment_body, author=author, type="comment"
+        )
+        _ = self.graph.add_edge(parent_id, comment_id)
+        parent_body: str = self.graph.nodes[parent_id].get("body", "")  # pyright: ignore[reportAny]
 
-        self.graph.nodes[node_id]["toxicity_score"] = toxicity
+        self.graph.nodes[comment_id]["toxicity_score"] = toxicity
 
         # TODO: Add an actual threshold that works for our data. This is a generic placeholder.
-        if toxicity >= 0.6:
+        if toxicity >= self.toxicity_threshold:
             # This would be the result of the agent. We have a category for type of toxicity, how many points to
             # penalize, and the reasoning from the agent.
             reasoning: ReasoningResult = self.reasoner.analyze_intent(
-                text, parent_text, root_context
+                comment_body, parent_body, thread_context
             )
 
             log_entry = {
-                "comment_id": node_id,
+                "comment_id": comment_id,
                 "author": author,
-                "text": text,
-                "context": parent_text,
-                "topic": root_context,
+                "comment_body": comment_body,
+                "parent_body": parent_body,
+                "thread_context": thread_context,
                 "reasoning": reasoning.model_dump(),
             }
 
@@ -133,7 +140,7 @@ class ModerationOrchestrator:
                 # If the user's points reach the threshold, intervene.
                 if current_penalty >= self.intervention_threshold:
                     action: InterventionResult = self.intervener.generate_intervention(
-                        text, author, current_penalty
+                        comment_body, author, current_penalty
                     )
                     print(
                         f"[INTERVENTION - {action['tone_used'].upper()}] To {author}: {action['intervention_text']}"

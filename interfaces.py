@@ -16,7 +16,7 @@ class RedditThread(TypedDict):
     submission_id: str
     author: str
     title: str
-    body: NotRequired[str]
+    selftext: NotRequired[str]
     created_utc: float
     comments: list[Comment]
     body_toxicity: NotRequired[float]
@@ -39,7 +39,7 @@ class ToxicityScorer(Protocol):
 
 class ReasoningAgent(Protocol):
     def analyze_intent(
-        self, text: str, parent_text: str, root_context: str
+        self, comment_body: str, parent_body: str, thread_context: str
     ) -> ReasoningResult: ...
 
 
