@@ -36,7 +36,7 @@ class ModerationOrchestrator:
         self,
         reasoner: ReasoningAgent,
         intervener: InterventionAgent,
-        intervention_threshold: int = 10,
+        intervention_threshold: int = 5,
         toxicity_threshold: float = 0.6,
     ) -> None:
         self.reasoner: ReasoningAgent = reasoner
@@ -49,6 +49,7 @@ class ModerationOrchestrator:
     def process_thread(self, thread: RedditThread) -> nx.DiGraph[str]:
         """Converts a thread to a graph and processes it chronologically to allow for scoring comments as they \"arrive\""""
         self.graph.clear()
+        self.tracker = UserStateTracker()
 
         submission_id = thread["submission_id"]
         post_body = thread.get("selftext", "").strip()
@@ -115,18 +116,18 @@ class ModerationOrchestrator:
             reasoning: ReasoningResult = self.reasoner.analyze_intent(
                 comment_body, parent_body, thread_context
             )
+            issue_type = (
+                "severe_explicit_hate"
+                if reasoning.category == "zero-tolerance"
+                else reasoning.issue_type
+            )
 
-            log_entry = {
-                "comment_id": comment_id,
-                "author": author,
-                "comment_body": comment_body,
-                "parent_body": parent_body,
-                "thread_context": thread_context,
-                "reasoning": reasoning.model_dump(),
-            }
+            self.graph.nodes[comment_id]["issue_type"] = issue_type
+            self.graph.nodes[comment_id]["reasoning_category"] = reasoning.category
+            self.graph.nodes[comment_id]["reasoning_explanation"] = reasoning.explanation
+            self.graph.nodes[comment_id]["points_assigned"] = reasoning.points
 
-            with open("reasoning_logs.jsonl", "a", encoding="utf-8") as f:
-                _ = f.write(json.dumps(log_entry) + "\n")
+            current_penalty = self.tracker.user_penalties.get(author, 0)
 
             if reasoning.category in ["toxic", "zero-tolerance"]:
                 # If the model categorizes as the comment as anything other than a heated flare, penalize
@@ -137,14 +138,74 @@ class ModerationOrchestrator:
                     f"[WARN] {author} gained {reasoning.points} pts (Total: {current_penalty})"
                 )
 
-                # If the user's points reach the threshold, intervene.
-                if current_penalty >= self.intervention_threshold:
-                    action: InterventionResult = self.intervener.generate_intervention(
-                        comment_body, author, current_penalty
-                    )
-                    print(
-                        f"[INTERVENTION - {action['tone_used'].upper()}] To {author}: {action['intervention_text']}"
-                    )
+            self.graph.nodes[comment_id]["cumulative_penalty"] = current_penalty
 
-                    # Potentially reset the points after the intervention?
-                    self.tracker.reset_penalty(author)
+            log_entry = {
+                "comment_id": comment_id,
+                "author": author,
+                "comment_body": comment_body,
+                "parent_body": parent_body,
+                "thread_context": thread_context,
+                "reasoning": {
+                    **reasoning.model_dump(),
+                    "issue_type": issue_type,
+                },
+                "cumulative_penalty": current_penalty,
+            }
+
+            with open("reasoning_logs.jsonl", "a", encoding="utf-8") as f:
+                _ = f.write(json.dumps(log_entry) + "\n")
+
+            # If the user's points reach the threshold, intervene.
+            if (
+                reasoning.category in ["toxic", "zero-tolerance"]
+                and current_penalty >= self.intervention_threshold
+            ):
+                action: InterventionResult = self.intervener.generate_intervention(
+                    text=comment_body,
+                    author=author,
+                    infractions=current_penalty,
+                    parent_text=parent_body,
+                    root_context=thread_context,
+                    issue_type=issue_type,
+                    reasoning_explanation=reasoning.explanation,
+                )
+                intervention_id = f"intervention:{comment_id}:{current_penalty}"
+                self.graph.add_node(
+                    intervention_id,
+                    author="Mediator",
+                    type="intervention",
+                    strategy=action["strategy"],
+                    target=action["target"],
+                    tone_used=action["tone_used"],
+                    rationale=action["rationale"],
+                    body=action["intervention_text"],
+                    text=action["intervention_text"],
+                    issue_type=issue_type,
+                    points_assigned=reasoning.points,
+                    cumulative_penalty=current_penalty,
+                )
+                _ = self.graph.add_edge(comment_id, intervention_id)
+
+                intervention_log = {
+                    "comment_id": comment_id,
+                    "intervention_id": intervention_id,
+                    "target_author": author,
+                    "issue_type": issue_type,
+                    "points_assigned": reasoning.points,
+                    "cumulative_penalty": current_penalty,
+                    "strategy": action["strategy"],
+                    "target": action["target"],
+                    "tone_used": action["tone_used"],
+                    "rationale": action["rationale"],
+                    "intervention_text": action["intervention_text"],
+                }
+                with open("intervention_logs.jsonl", "a", encoding="utf-8") as f:
+                    _ = f.write(json.dumps(intervention_log) + "\n")
+
+                print(
+                    f"[INTERVENTION - {action['tone_used'].upper()}] To {author}: {action['intervention_text']}"
+                )
+
+                # Potentially reset the points after the intervention?
+                self.tracker.reset_penalty(author)
