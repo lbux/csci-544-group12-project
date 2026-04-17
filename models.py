@@ -42,8 +42,9 @@ def _extract_json_dict(raw_text: str) -> dict[str, Any] | None:
 
 
 class LLMReasoner:
-    def __init__(self, model: str = "gemma4:e4b") -> None:
+    def __init__(self, model: str = "gemma4:e4b", prompt: str = SYSTEM_MESSAGE) -> None:
         self.model: str = model
+        self.prompt: str = prompt
         # self.client: Client = ollama.Client(
         #     host="http://localhost:14434",
         # )
@@ -52,6 +53,7 @@ class LLMReasoner:
     def analyze_intent(
         self, comment_body: str, parent_body: str, thread_context: str
     ) -> ReasoningResult:
+        """Takes the comment, parent comment, and thread body as context to produce a reasoning result from the LLM Reasoner"""
 
         SYSTEM_MESSAGE: str = """
         You are an impartial Moderation Judge for a highly contentious discussion forum. 
@@ -343,7 +345,7 @@ class ToxicityClassifier:
         )
 
     def predict(self, text: str) -> float:
-
+        """"Assigns a Toxicity score to the input using a pre-trained classifier"""
         # print(self.ort_model.config)
 
         inputs = self.tokenizer(  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
