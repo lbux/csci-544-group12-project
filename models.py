@@ -10,6 +10,7 @@ from huggingface_hub import (
 from optimum.onnxruntime import ORTModelForSequenceClassification
 from pydantic import BaseModel, ValidationError
 from transformers import AutoTokenizer
+from prompts import SYSTEM_MESSAGE
 
 from interfaces import InterventionResult, ReasoningResult
 
