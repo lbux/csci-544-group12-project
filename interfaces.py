@@ -25,10 +25,14 @@ class RedditThread(TypedDict):
 class ReasoningResult(BaseModel):
     explanation: str
     category: str  # e.g., "flare", "toxic", "zero-tolerance"
+    issue_type: str
     points: int
 
 
 class InterventionResult(TypedDict):
+    strategy: str
+    rationale: str
+    target: str
     intervention_text: str
     tone_used: str
 
@@ -45,7 +49,14 @@ class ReasoningAgent(Protocol):
 
 class InterventionAgent(Protocol):
     def generate_intervention(
-        self, text: str, author: str, infractions: int
+        self,
+        text: str,
+        author: str,
+        cumulative_penalty: int,
+        parent_text: str,
+        root_context: str,
+        issue_type: str,
+        reasoning_explanation: str,
     ) -> InterventionResult: ...
 
 
