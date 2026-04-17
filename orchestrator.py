@@ -174,7 +174,7 @@ class ModerationOrchestrator:
                 issue_type=issue_type,
                 reasoning_explanation=reasoning.explanation,
             )
-            intervention_id = f"intervention:{comment_id}:{thread_penalty}"
+            intervention_id = f"intervention_{comment_id}_{thread_penalty}"
             self.graph.add_node(
                 intervention_id,
                 author="Mediator",
