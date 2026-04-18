@@ -12,4 +12,6 @@ wheels/
 *.vscode
 *.jsonl
 
+.DS_Store
+
 /models
